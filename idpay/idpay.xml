@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<extension version="3.6" type="plugin" group="vmpayment" method="upgrade">
+    <name>IDPay</name>
+    <version>1.0</version>
+    <description>IDPay</description>
+    <author>Developer: JMDMahdi, Publisher: IDPay</author>
+    <authorUrl>http://idpay.ir</authorUrl>
+    <authorEmail>info@idpay.ir</authorEmail>
+    <creationDate>October 2018</creationDate>
+    <copyright>Copyright (C) 2018 IDPay</copyright>
+    <license>http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later</license>
+
+    <files>
+        <filename plugin="idpay">idpay.php</filename>
+        <folder>idpay</folder>
+    </files>
+
+    <vmconfig>
+        <fields name="params">
+            <fieldset name="payment" addfieldpath="/administrator/components/com_virtuemart/fields">
+                <field name="api_key" type="text" size="40" label="API KEY" description="" default=""/>
+                <field name="sandbox" type="checkbox" default="0" label="آزمایشگاه" description=""/>
+                <field name="success_massage" type="text" size="40" label="پیام پرداخت موفق" description="متن پیامی که می خواهید بعد از پرداخت موفق به کاربر نمایش دهید را وارد کنید. همچنین می توانید از شورت کدهای {order_id} برای نمایش شماره سفارش و {track_id} برای نمایش کد رهگیری آیدی پی استفاده نمایید." default="پرداخت شما با موفقیت انجام شد. کد رهگیری: {track_id}"/>
+                <field name="failed_massage" type="text" size="40" label="پیام پرداخت ناموفق" description="متن پیامی که می خواهید بعد از پرداخت ناموفق به کاربر نمایش دهید را وارد کنید. همچنین می توانید از شورت کدهای {order_id} برای نمایش شماره سفارش و {track_id} برای نمایش کد رهگیری آیدی پی استفاده نمایید." default="پرداخت شما ناموفق بوده است. لطفا مجددا تلاش نمایید یا در صورت بروز اشکال با مدیر سایت تماس بگیرید."/>
+            </fieldset>
+        </fields>
+    </vmconfig>
+</extension>
