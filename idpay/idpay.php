@@ -127,7 +127,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
         curl_close($ch);
 
         if ($http_status != 201 || empty($result) || empty($result->id) || empty($result->link)) {
-            $msg = sprintf('خطا هنگام ایجاد تراکنش. کد خطا: %s', $http_status);
+            $msg = sprintf('خطا هنگام ایجاد تراکنش. وضعیت خطا: %s - کد خطا: %s - پیغام خطا: %s', $http_status, $result->error_code, $result->error_message);
             $link = JRoute::_(JUri::root() . 'index.php/component/virtuemart/cart', false);
             $app->redirect($link, '<h2>' . $msg . '</h2>', $msgType = 'Error');
         }
@@ -203,7 +203,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
                     curl_close($ch);
 
                     if ($http_status != 200) {
-                        $msg = sprintf('خطا هنگام بررسی وضعیت تراکنش. کد خطا: %s', $http_status);
+                        $msg = sprintf('خطا هنگام بررسی وضعیت تراکنش. وضعیت خطا: %s - کد خطا: %s - پیام خطا: %s', $http_status, $result->error_code, $result->error_message);
                         $link = JRoute::_(JUri::root() . 'index.php/component/virtuemart/cart', false);
                         $app->redirect($link, '<h2>' . $msg . '</h2>', $msgType = 'Error');
                     }
