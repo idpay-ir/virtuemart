@@ -104,15 +104,22 @@ class plgVmPaymentIdpay extends vmPSPlugin
             $app->redirect($link, '<h2>' . $msg . '</h2>', $msgType = 'Error');
         }
 
+        // Customer information
+	    $name = $order['details']['BT']->first_name . ' ' . $order['details']['BT']->last_name;
+        $phone = $order['details']['BT']->phone_2;
+        $mail = $order['details']['BT']->email;
+
         $data = array(
             'order_id' => $order['details']['BT']->order_number,
             'amount' => $amount,
-            'phone' => $order['details']['BT']->phone_2,
+            'name' => $name,
+            'phone' => $phone,
+            'mail' => $mail,
             'desc' => $desc,
             'callback' => $callback,
         );
 
-        $ch = curl_init('https://api.idpay.ir/v1/payment');
+        $ch = curl_init('https://api.idpay.ir/v1.1/payment');
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
@@ -177,58 +184,72 @@ class plgVmPaymentIdpay extends vmPSPlugin
             if (JUserHelper::verifyPassword($id, $uId)) {
                 $pid = $jinput->post->get('id', '', 'STRING');
                 $porder_id = $jinput->post->get('order_id', '', 'STRING');
-                if (!empty($pid) && !empty($porder_id) && $porder_id == $order_id) {
+                $pstatus = $jinput->post->get('status', 0, 'INT');
+                $ptrack_id = $jinput->post->get('track_id', 0, 'INT');
+                if (!empty($pid) && !empty($porder_id) && $porder_id == $order_id)
+                {
+					if( $pstatus == 10 )
+					{
+		                $api_key = $method->api_key;
+		                $sandbox = $method->sandbox == 0 ? 'false' : 'true';
 
-                    $api_key = $method->api_key;
-                    $sandbox = $method->sandbox == 0 ? 'false' : 'true';
+		                $data = array(
+			                'id'       => $pid,
+			                'order_id' => $order_id,
+		                );
 
-                    $data = array(
-                        'id' => $pid,
-                        'order_id' => $order_id,
-                    );
+		                $ch = curl_init();
+		                curl_setopt( $ch, CURLOPT_URL, 'https://api.idpay.ir/v1.1/payment/verify' );
+		                curl_setopt( $ch, CURLOPT_POSTFIELDS, json_encode( $data ) );
+		                curl_setopt( $ch, CURLOPT_RETURNTRANSFER, TRUE );
+		                curl_setopt( $ch, CURLOPT_HTTPHEADER, array(
+			                'Content-Type: application/json',
+			                'X-API-KEY:' . $api_key,
+			                'X-SANDBOX:' . $sandbox,
+		                ) );
 
-                    $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, 'https://api.idpay.ir/v1/payment/inquiry');
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                        'Content-Type: application/json',
-                        'X-API-KEY:' . $api_key,
-                        'X-SANDBOX:' . $sandbox,
-                    ));
+		                $result      = curl_exec( $ch );
+		                $result      = json_decode( $result );
+		                $http_status = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+		                curl_close( $ch );
 
-                    $result = curl_exec($ch);
-                    $result = json_decode($result);
-                    $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
+		                if ( $http_status != 200 )
+		                {
+			                $msg  = sprintf( 'خطا هنگام بررسی وضعیت تراکنش. وضعیت خطا: %s - کد خطا: %s - پیام خطا: %s', $http_status, $result->error_code, $result->error_message );
+			                $link = JRoute::_( JUri::root() . 'index.php/component/virtuemart/cart', FALSE );
+			                $app->redirect( $link, '<h2>' . $msg . '</h2>', $msgType = 'Error' );
+		                }
 
-                    if ($http_status != 200) {
-                        $msg = sprintf('خطا هنگام بررسی وضعیت تراکنش. وضعیت خطا: %s - کد خطا: %s - پیام خطا: %s', $http_status, $result->error_code, $result->error_message);
-                        $link = JRoute::_(JUri::root() . 'index.php/component/virtuemart/cart', false);
-                        $app->redirect($link, '<h2>' . $msg . '</h2>', $msgType = 'Error');
+		                $verify_status   = empty( $result->status ) ? NULL : $result->status;
+		                $verify_track_id = empty( $result->track_id ) ? NULL : $result->track_id;
+		                $verify_amount   = empty( $result->amount ) ? NULL : $result->amount;
+
+		                if ( empty( $verify_status ) || empty( $verify_track_id ) || empty( $verify_amount ) || $verify_amount != $price || $verify_status < 100 )
+		                {
+			                $msg  = $this->idpay_get_failed_message( $method, $verify_track_id, $order_id );
+			                $link = JRoute::_( JUri::root() . 'index.php/component/virtuemart/cart', FALSE );
+			                $app->redirect( $link, '<h2>' . $msg . '</h2>', $msgType = 'Error' );
+		                }
+		                else
+		                {
+			                $msg  = $this->idpay_get_success_message( $method, $verify_track_id, $order_id );
+			                $html = $this->renderByLayout( 'idpay', array(
+				                'order_number' => $order_id,
+				                'order_pass'   => $pass_id,
+				                'status'       => $msg
+			                ) );
+			                $this->updateStatus( 'C', 1, $msg, $id );
+			                $this->updateOrderInfo( $id, sprintf( 'وضعیت پرداخت تراکنش: %s', $verify_status ) );
+			                vRequest::setVar( 'html', $html );
+			                $cart = VirtueMartCart::getCart();
+			                $cart->emptyCart();
+			                $session->clear( 'idpay' );
+		                }
                     }
-
-                    $inquiry_status = empty($result->status) ? NULL : $result->status;
-                    $inquiry_track_id = empty($result->track_id) ? NULL : $result->track_id;
-                    $inquiry_amount = empty($result->amount) ? NULL : $result->amount;
-
-                    if (empty($inquiry_status) || empty($inquiry_track_id) || empty($inquiry_amount) || $inquiry_amount != $price || $inquiry_status != 100) {
-                        $msg = $this->idpay_get_failed_message($method, $inquiry_track_id, $order_id);
-                        $link = JRoute::_(JUri::root() . 'index.php/component/virtuemart/cart', false);
-                        $app->redirect($link, '<h2>' . $msg . '</h2>', $msgType = 'Error');
-                    } else {
-                        $msg = $this->idpay_get_success_message($method, $inquiry_track_id, $order_id);
-                        $html = $this->renderByLayout('idpay', array(
-                            'order_number' => $order_id,
-                            'order_pass' => $pass_id,
-                            'status' => $msg
-                        ));
-                        $this->updateStatus('C', 1, $msg, $id);
-                        $this->updateOrderInfo($id, sprintf('وضعیت پرداخت تراکنش: %s', $inquiry_status));
-                        vRequest::setVar('html', $html);
-                        $cart = VirtueMartCart::getCart();
-                        $cart->emptyCart();
-                        $session->clear('idpay');
+                    else {
+	                    $msg  = $this->idpay_get_failed_message( $method, $ptrack_id, $order_id );
+	                    $link = JRoute::_( JUri::root() . 'index.php/component/virtuemart/cart', FALSE );
+	                    $app->redirect( $link, '<h2>' . $msg . '</h2>', $msgType = 'Error' );
                     }
                 } else {
                     $msg = 'کاربر از انجام تراکنش منصرف شده است';
