@@ -140,7 +140,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
 
 
         if ($http_status != 201 || empty($result) || empty($result->id) || empty($result->link)) {
-            $msg = sprintf('خطا هنگام ایجاد تراکنش. وضعیت خطا: %s - کد خطا: %s - پیغام خطا: %s', $http_status, $result->error_code, $result->error_message);
+            $msg= 'خطا هنگام ایجاد تراکنش. وضعیت خطا:'.$http_status ."<br>".'کد خطا: '.$result->error_code.' پیغام خطا '. $result->error_message;
             $this->updateStatus('P', 0, $msg, $order['details']['BT']->virtuemart_order_id);
             $this->updateOrderInfo($order['details']['BT']->virtuemart_order_id, $msg);
             $link = JRoute::_(JUri::root() . 'index.php/component/virtuemart/cart', false);
@@ -272,7 +272,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
                                 'status' => $msg
                             ));
 
-                            $msgForSaveDataTDataBase = $this->otherStatusMessages($verify_status) . "شماره تراکنش :  $verify_track_id " . "شماره کارت :  $card_no " . "شماره کارت رمزنگاری شده : $hashed_card_no ";
+                            $msgForSaveDataTDataBase = $this->otherStatusMessages($verify_status) . "کد پیگیری :  $verify_track_id " . "شماره کارت :  $card_no " . "شماره کارت رمزنگاری شده : $hashed_card_no ";
                             var_dump($msgForSaveDataTDataBase);
                             $this->updateStatus('C', 1, $msgForSaveDataTDataBase, $id);
                             $this->updateOrderInfo($id, sprintf('وضعیت پرداخت تراکنش: %s', $verify_status));
