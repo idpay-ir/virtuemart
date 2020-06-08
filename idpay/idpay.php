@@ -94,6 +94,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
         $this->storePSPluginInternalData($dbValues);
         $app = JFactory::getApplication();
 
+
         $api_key = $method->api_key;
         $sandbox = $method->sandbox == 0 ? 'false' : 'true';
 
@@ -137,8 +138,11 @@ class plgVmPaymentIdpay extends vmPSPlugin
         $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
+
         if ($http_status != 201 || empty($result) || empty($result->id) || empty($result->link)) {
             $msg = sprintf('خطا هنگام ایجاد تراکنش. وضعیت خطا: %s - کد خطا: %s - پیغام خطا: %s', $http_status, $result->error_code, $result->error_message);
+            $this->updateStatus('P', 0, $msg, $order['details']['BT']->virtuemart_order_id);
+            $this->updateOrderInfo($order['details']['BT']->virtuemart_order_id, $msg);
             $link = JRoute::_(JUri::root() . 'index.php/component/virtuemart/cart', false);
             $app->redirect($link, '<h2>' . $msg . '</h2>', $msgType = 'Error');
         }
@@ -159,7 +163,6 @@ class plgVmPaymentIdpay extends vmPSPlugin
         $jinput = $app->input;
         $gateway = $jinput->get->get('gw', '', 'STRING');
         $msgNumber = $jinput->post->get('status', '', 'INTEGER');
-
 
 
         if ($gateway == 'IDPay') {
@@ -239,9 +242,12 @@ class plgVmPaymentIdpay extends vmPSPlugin
 
 
                         $verify_status = empty($result->status) ? NULL : $result->status;
-                        $verify_track_id = empty($result->track_id) ? NULL : $result->track_id;
                         $verify_amount = empty($result->amount) ? NULL : $result->amount;
                         $verify_order_id = empty($result->order_id) ? NULL : $result->order_id;
+                        $verify_track_id = empty($result->track_id) ? NULL : $result->track_id;
+                        $hashed_card_no = empty($result->payment->hashed_card_no) ? NULL : $result->payment->hashed_card_no;
+                        $card_no = empty($result->payment->hashed_card_no) ? NULL : $result->payment->hashed_card_no;
+
 
                         if (empty($verify_status) || empty($verify_track_id) || empty($verify_amount) || $verify_amount != $price || $verify_status < 100) {
                             $msg = $this->idpay_get_failed_message($method, $verify_track_id, $order_id);
@@ -259,14 +265,16 @@ class plgVmPaymentIdpay extends vmPSPlugin
 
 
                             $msg = $this->idpay_get_success_message($method, $verify_track_id, $order_id, $msgNumber);
+
                             $html = $this->renderByLayout('idpay', array(
                                 'order_number' => $order_id,
                                 'order_pass' => $pass_id,
                                 'status' => $msg
                             ));
 
-
-                            $this->updateStatus('C', 1, $msg, $id);
+                            $msgForSaveDataTDataBase = $this->otherStatusMessages($verify_status) . "شماره تراکنش :  $verify_track_id " . "شماره کارت :  $card_no " . "شماره کارت رمزنگاری شده : $hashed_card_no ";
+                            var_dump($msgForSaveDataTDataBase);
+                            $this->updateStatus('C', 1, $msgForSaveDataTDataBase, $id);
                             $this->updateOrderInfo($id, sprintf('وضعیت پرداخت تراکنش: %s', $verify_status));
                             vRequest::setVar('html', $html);
                             $cart = VirtueMartCart::getCart();
@@ -548,11 +556,11 @@ class plgVmPaymentIdpay extends vmPSPlugin
                 break;
             case null:
                 $msg = "خطا دور از انتظار";
-                $msgNumber='1000';
+                $msgNumber = '1000';
                 break;
         }
 
-        return $msg . ' -کد خطا: ' . "$msgNumber";
+        return $msg . ' -وضعیت: ' . "$msgNumber";
 
     }
 
