@@ -273,7 +273,6 @@ class plgVmPaymentIdpay extends vmPSPlugin
                             ));
 
                             $msgForSaveDataTDataBase = $this->otherStatusMessages($verify_status) . "کد پیگیری :  $verify_track_id " . "شماره کارت :  $card_no " . "شماره کارت رمزنگاری شده : $hashed_card_no ";
-                            var_dump($msgForSaveDataTDataBase);
                             $this->updateStatus('C', 1, $msgForSaveDataTDataBase, $id);
                             $this->updateOrderInfo($id, sprintf('وضعیت پرداخت تراکنش: %s', $verify_status));
                             vRequest::setVar('html', $html);
