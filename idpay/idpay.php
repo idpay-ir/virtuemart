@@ -19,10 +19,16 @@ if (!class_exists('vmPSPlugin')) {
     require(JPATH_VM_PLUGINS . '/vmpsplugin.php');
 }
 
+use Joomla\CMS\Http\Http;
+use Joomla\CMS\Http\HttpFactory;
 class plgVmPaymentIdpay extends vmPSPlugin
 {
-    function __construct(& $subject, $config)
+    private $http;
+
+
+    function __construct(& $subject, $config, Http $http = null)
     {
+        $this->http = $http ?: HttpFactory::getHttp();
         parent::__construct($subject, $config);
         $this->_loggable = TRUE;
         $this->tableFields = array_keys($this->getTableSQLFields());
@@ -30,6 +36,15 @@ class plgVmPaymentIdpay extends vmPSPlugin
         $this->_tableId = 'id';
         $varsToPush = array('api_key' => array('', 'varchar'), 'sandbox' => array(0, 'int'), 'success_massage' => array('', 'varchar'), 'failed_massage' => array('', 'varchar'));
         $this->setConfigParameterable($this->_configTableFieldName, $varsToPush);
+    }
+
+    public function options($api_key,$sandbox)
+    {
+        $options = array('Content-Type' => 'application/json',
+            'X-API-KEY' => $api_key,
+            'X-SANDBOX' => $sandbox,
+        );
+        return $options;
     }
 
     public function getVmPluginCreateTableSQL()
@@ -52,7 +67,8 @@ class plgVmPaymentIdpay extends vmPSPlugin
             'payment_currency' => 'char(3)',
             'email_currency' => 'char(3)',
             'mobile' => 'varchar(12)',
-            'tracking_code' => 'varchar(50)'
+            'tracking_code' => 'varchar(50)',
+            'idpay_id' => 'varchar(100)',
         );
         return $SQLfields;
     }
@@ -77,27 +93,12 @@ class plgVmPaymentIdpay extends vmPSPlugin
             $session->clear('idpay');
         }
         $session->set('idpay', $crypt_virtuemartPID);
-
         $payment_currency = $this->getPaymentCurrency($method, $order['details']['BT']->payment_currency_id);
         $totalInPaymentCurrency = vmPSPlugin::getAmountInCurrency($order['details']['BT']->order_total, $payment_currency);
         $email_currency = $this->getEmailCurrency($method);
-        $dbValues['payment_name'] = $this->renderPluginName($method) . '<br />';
-        $dbValues['order_number'] = $order['details']['BT']->order_number;
-        $dbValues['order_pass'] = $order['details']['BT']->order_pass;
-        $dbValues['virtuemart_paymentmethod_id'] = $order['details']['BT']->virtuemart_paymentmethod_id;
-        $dbValues['crypt_virtuemart_pid'] = $crypt_virtuemartPID;
-        $dbValues['salt'] = $salt;
-        $dbValues['payment_currency'] = $order['details']['BT']->order_currency;
-        $dbValues['email_currency'] = $email_currency;
-        $dbValues['amount'] = $totalInPaymentCurrency['value'];
-        $dbValues['mobile'] = $order['details']['BT']->phone_2;
-        $this->storePSPluginInternalData($dbValues);
         $app = JFactory::getApplication();
-
-
         $api_key = $method->api_key;
         $sandbox = $method->sandbox == 0 ? 'false' : 'true';
-
         $amount = $totalInPaymentCurrency['value'];
         $desc = 'خرید محصول از فروشگاه   ' . $cart->vendor->vendor_store_name;
         $callback = JURI::root() . 'index.php?option=com_virtuemart&view=pluginresponse&task=pluginresponsereceived&gw=IDPay';
@@ -113,7 +114,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
         $phone = $order['details']['BT']->phone_2;
         $mail = $order['details']['BT']->email;
 
-
+        $url = 'https://api.idpay.ir/v1.1/payment';
         $data = array(
             'order_id' => $order['details']['BT']->order_number,
             'amount' => $amount,
@@ -124,23 +125,29 @@ class plgVmPaymentIdpay extends vmPSPlugin
             'callback' => $callback,
         );
 
-        $ch = curl_init('https://api.idpay.ir/v1.1/payment');
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            'Content-Type: application/json',
-            'X-API-KEY:' . $api_key,
-            'X-SANDBOX:' . $sandbox,
-        ));
+        $options = $this->options($api_key,$sandbox);
+        $result = $this->http->post($url, json_encode($data, true), $options);
+        $http_status = $result->code;
+        $result = json_decode($result->body);
 
-        $result = curl_exec($ch);
-        $result = json_decode($result);
-        $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+
+        //insert idpay table jnfo
+        $dbValues['payment_name'] = $this->renderPluginName($method) . '<br />';
+        $dbValues['order_number'] = $order['details']['BT']->order_number;
+        $dbValues['order_pass'] = $order['details']['BT']->order_pass;
+        $dbValues['virtuemart_paymentmethod_id'] = $order['details']['BT']->virtuemart_paymentmethod_id;
+        $dbValues['crypt_virtuemart_pid'] = $crypt_virtuemartPID;
+        $dbValues['salt'] = $salt;
+        $dbValues['payment_currency'] = $order['details']['BT']->order_currency;
+        $dbValues['email_currency'] = $email_currency;
+        $dbValues['amount'] = $totalInPaymentCurrency['value'];
+        $dbValues['mobile'] = $order['details']['BT']->phone_2;
+        $dbValues['idpay_id'] = $result->id;
+        $this->storePSPluginInternalData($dbValues);
 
 
         if ($http_status != 201 || empty($result) || empty($result->id) || empty($result->link)) {
-            $msg= 'خطا هنگام ایجاد تراکنش. وضعیت خطا:'.$http_status ."<br>".'کد خطا: '.$result->error_code.' پیغام خطا '. $result->error_message;
+            $msg = 'خطا هنگام ایجاد تراکنش. وضعیت خطا:' . $http_status . "<br>" . 'کد خطا: ' . $result->error_code . ' پیغام خطا ' . $result->error_message;
             $this->updateStatus('P', 0, $msg, $order['details']['BT']->virtuemart_order_id);
             $this->updateOrderInfo($order['details']['BT']->virtuemart_order_id, $msg);
             $link = JRoute::_(JUri::root() . 'index.php/component/virtuemart/cart', false);
@@ -153,20 +160,16 @@ class plgVmPaymentIdpay extends vmPSPlugin
     public function plgVmOnPaymentResponseReceived(&$html)
     {
 
-
         if (!class_exists('VirtueMartModelOrders')) {
             require(VMPATH_ADMIN . DS . 'models' . DS . 'orders.php');
         }
-
 
         $app = JFactory::getApplication();
         $jinput = $app->input;
         $gateway = $jinput->get->get('gw', '', 'STRING');
         $msgNumber = $jinput->post->get('status', '', 'INTEGER');
 
-
         if ($gateway == 'IDPay') {
-
             $session = JFactory::getSession();
             if ($session->isActive('idpay') && $session->get('idpay') != null) {
                 $cryptID = $session->get('idpay');
@@ -176,6 +179,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
                 $app->redirect($link, '<h2>' . $msg . '</h2>', $msgType = 'Error');
             }
             $orderInfo = $this->getOrderInfo($cryptID);
+
             if ($orderInfo != null) {
                 if (!($currentMethod = $this->getVmPluginMethod($orderInfo->virtuemart_paymentmethod_id))) {
                     return NULL;
@@ -184,17 +188,14 @@ class plgVmPaymentIdpay extends vmPSPlugin
                 return NULL;
             }
 
-
             $salt = $orderInfo->salt;
             $id = $orderInfo->virtuemart_order_id;
             $uId = $cryptID . ':' . $salt;
-
             $order_id = $orderInfo->order_number;
             $payment_id = $orderInfo->virtuemart_paymentmethod_id;
             $pass_id = $orderInfo->order_pass;
             $price = round($orderInfo->amount, 5);
             $method = $this->getVmPluginMethod($payment_id);
-
 
             if (JUserHelper::verifyPassword($id, $uId)) {
                 $pid = $jinput->post->get('id', '', 'STRING');
@@ -203,43 +204,23 @@ class plgVmPaymentIdpay extends vmPSPlugin
 
 
                 if (!empty($pid) && !empty($porder_id) && $porder_id == $order_id) {
-
-
                     if ($pstatus == 10) {
-
-
                         $api_key = $method->api_key;
                         $sandbox = $method->sandbox == 0 ? 'false' : 'true';
-
                         $data = array(
                             'id' => $pid,
                             'order_id' => $order_id,
                         );
-
-
-                        $ch = curl_init();
-                        curl_setopt($ch, CURLOPT_URL, 'https://api.idpay.ir/v1.1/payment/verify');
-                        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                            'Content-Type: application/json',
-                            'X-API-KEY:' . $api_key,
-                            'X-SANDBOX:' . $sandbox,
-                        ));
-
-
-                        $result = curl_exec($ch);
-                        $result = json_decode($result);
-                        $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                        curl_close($ch);
-
-
+                        $url = 'https://api.idpay.ir/v1.1/payment/verify';
+                        $options = $this->options($api_key,$sandbox);
+                        $result = $this->http->post($url, json_encode($data, true), $options);
+                        $http_status = $result->code;
+                        $result = json_decode($result->body);
                         if ($http_status != 200) {
                             $msg = sprintf('خطا هنگام بررسی وضعیت تراکنش. وضعیت خطا: %s - کد خطا: %s - پیام خطا: %s', $http_status, $result->error_code, $result->error_message);
                             $link = JRoute::_(JUri::root() . 'index.php/component/virtuemart/cart', FALSE);
                             $app->redirect($link, '<h2>' . $msg . '</h2>', $msgType = 'Error');
                         }
-
 
                         $verify_status = empty($result->status) ? NULL : $result->status;
                         $verify_amount = empty($result->amount) ? NULL : $result->amount;
@@ -254,8 +235,8 @@ class plgVmPaymentIdpay extends vmPSPlugin
                             $link = JRoute::_(JUri::root() . 'index.php/component/virtuemart/cart', FALSE);
                             $app->redirect($link, '<h2>' . $msg . '</h2>', $msgType = 'Error');
                         } else {
-
-                            if ($verify_order_id !== $order_id) {
+                            //double spending
+                            if ($verify_order_id !== $order_id or $orderInfo->idpay_id !== $result->id) {
                                 $this->updateStatus('P', 0, $this->otherStatusMessages(), $id);
                                 $this->updateOrderInfo($id, $this->otherStatusMessages());
                                 $msg = $this->idpay_get_failed_message($method, $verify_track_id, $order_id, 0);
@@ -263,9 +244,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
                                 $app->redirect($link, '<h2>' . $msg . '</h2>', $msgType = 'Error');
                             }
 
-
                             $msg = $this->idpay_get_success_message($method, $verify_track_id, $order_id, $msgNumber);
-
                             $html = $this->renderByLayout('idpay', array(
                                 'order_number' => $order_id,
                                 'order_pass' => $pass_id,
