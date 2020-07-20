@@ -9,11 +9,12 @@
  * @copyright (C) 2018 IDPay
  * @license http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later
  *
- * http://idpay.ir
+ * https://idpay.ir
  */
 
 defined('_JEXEC') or die();
 ?>
+
 <div id="idpay_result">
     <?php echo $viewData['status']; ?>
 </div>

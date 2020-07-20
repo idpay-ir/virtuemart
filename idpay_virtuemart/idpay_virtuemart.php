@@ -9,7 +9,7 @@
  * @copyright (C) 2018 IDPay
  * @license http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later
  *
- * http://idpay.ir
+ * https://idpay.ir
  */
 
 defined('_JEXEC') or die('Restricted access');
@@ -21,6 +21,7 @@ if (!class_exists('vmPSPlugin')) {
 
 use Joomla\CMS\Http\Http;
 use Joomla\CMS\Http\HttpFactory;
+
 class plgVmPaymentIdpay extends vmPSPlugin
 {
     private $http;
@@ -76,8 +77,6 @@ class plgVmPaymentIdpay extends vmPSPlugin
 
     function plgVmConfirmedOrder($cart, $order)
     {
-
-
         if (!$this->selectedThisByMethodId($cart->virtuemart_paymentmethod_id)) {
             return null;
         }
@@ -201,7 +200,6 @@ class plgVmPaymentIdpay extends vmPSPlugin
                 $pid = $jinput->post->get('id', '', 'STRING');
                 $porder_id = $jinput->post->get('order_id', '', 'STRING');
                 $pstatus = $jinput->post->get('status', 0, 'INT');
-
 
                 if (!empty($pid) && !empty($porder_id) && $porder_id == $order_id) {
                     if ($pstatus == 10) {
@@ -377,7 +375,6 @@ class plgVmPaymentIdpay extends vmPSPlugin
         }
         $htmlIn[] = $htmla;
         return true;
-
     }
 
 
@@ -541,6 +538,4 @@ class plgVmPaymentIdpay extends vmPSPlugin
         return $msg . ' -وضعیت: ' . "$msgNumber";
 
     }
-
-
 }
