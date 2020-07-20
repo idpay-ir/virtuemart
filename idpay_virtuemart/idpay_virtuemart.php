@@ -1,4 +1,5 @@
 <?php
+
 /**
  * IDPay payment plugin
  *
@@ -22,7 +23,7 @@ if (!class_exists('vmPSPlugin')) {
 use Joomla\CMS\Http\Http;
 use Joomla\CMS\Http\HttpFactory;
 
-class plgVmPaymentIdpay extends vmPSPlugin
+class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
 {
     private $http;
 
