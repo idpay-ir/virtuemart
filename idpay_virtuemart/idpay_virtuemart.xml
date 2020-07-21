@@ -6,14 +6,18 @@
     <author>JMDMahdi, Vispa</author>
     <authorUrl>https://idpay.ir</authorUrl>
     <authorEmail>info@idpay.ir</authorEmail>
-    <creationDate>October 2018</creationDate>
-    <copyright>Copyright (C) 2018 IDPay</copyright>
+    <creationDate>June 2020</creationDate>
+    <copyright>Copyright (C) 2020 IDPay</copyright>
     <license>http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later</license>
 
     <files>
         <filename plugin="idpay_virtuemart">idpay_virtuemart.php</filename>
         <folder>idpay_virtuemart</folder>
     </files>
+
+    <updateservers>
+           <server type="extension" priority="1" name="System - IDPay for Virtuemart">https://github.com/idpay/virtuemart/archive/master.zip</server>
+    </updateservers>
 
     <vmconfig>
         <fields name="params">
