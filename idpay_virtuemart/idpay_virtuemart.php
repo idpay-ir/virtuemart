@@ -3,11 +3,11 @@
 /**
  * IDPay payment plugin
  *
- * @developer JMDMahdi
+ * @developer JMDMahdi, vispamir, mnbp1371
  * @publisher IDPay
  * @package VirtueMart
  * @subpackage payment
- * @copyright (C) 2018 IDPay
+ * @copyright (C) 2020 IDPay
  * @license http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later
  *
  * https://idpay.ir
