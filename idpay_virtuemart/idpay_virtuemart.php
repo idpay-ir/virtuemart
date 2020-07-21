@@ -1,4 +1,5 @@
 <?php
+
 /**
  * IDPay payment plugin
  *
@@ -9,7 +10,7 @@
  * @copyright (C) 2018 IDPay
  * @license http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later
  *
- * http://idpay.ir
+ * https://idpay.ir
  */
 
 defined('_JEXEC') or die('Restricted access');
@@ -21,7 +22,8 @@ if (!class_exists('vmPSPlugin')) {
 
 use Joomla\CMS\Http\Http;
 use Joomla\CMS\Http\HttpFactory;
-class plgVmPaymentIdpay extends vmPSPlugin
+
+class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
 {
     private $http;
 
@@ -76,7 +78,6 @@ class plgVmPaymentIdpay extends vmPSPlugin
 
     function plgVmConfirmedOrder($cart, $order)
     {
-
 
         if (!$this->selectedThisByMethodId($cart->virtuemart_paymentmethod_id)) {
             return null;
@@ -202,7 +203,6 @@ class plgVmPaymentIdpay extends vmPSPlugin
                 $porder_id = $jinput->post->get('order_id', '', 'STRING');
                 $pstatus = $jinput->post->get('status', 0, 'INT');
 
-
                 if (!empty($pid) && !empty($porder_id) && $porder_id == $order_id) {
                     if ($pstatus == 10) {
                         $api_key = $method->api_key;
@@ -245,7 +245,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
                             }
 
                             $msg = $this->idpay_get_success_message($method, $verify_track_id, $order_id, $msgNumber);
-                            $html = $this->renderByLayout('idpay', array(
+                            $html = $this->renderByLayout('idpay_virtuemart', array(
                                 'order_number' => $order_id,
                                 'order_pass' => $pass_id,
                                 'status' => $msg
@@ -290,7 +290,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
         $db = JFactory::getDbo();
         $query = $db->getQuery(true);
         $query->select('*')
-            ->from($db->qn('#__virtuemart_payment_plg_idpay'));
+            ->from($db->qn('#__virtuemart_payment_plg_idpay_virtuemart'));
         $query->where($db->qn('crypt_virtuemart_pid') . ' = ' . $db->q($id));
         $db->setQuery((string)$query);
         $result = $db->loadObject();
@@ -303,7 +303,7 @@ class plgVmPaymentIdpay extends vmPSPlugin
         $query = $db->getQuery(true);
         $fields = array($db->qn('tracking_code') . ' = ' . $db->q($trackingCode));
         $conditions = array($db->qn('virtuemart_order_id') . ' = ' . $db->q($id));
-        $query->update($db->qn('#__virtuemart_payment_plg_idpay'));
+        $query->update($db->qn('#__virtuemart_payment_plg_idpay_virtuemart'));
         $query->set($fields);
         $query->where($conditions);
         $db->setQuery($query);
@@ -377,7 +377,6 @@ class plgVmPaymentIdpay extends vmPSPlugin
         }
         $htmlIn[] = $htmla;
         return true;
-
     }
 
 
@@ -541,6 +540,4 @@ class plgVmPaymentIdpay extends vmPSPlugin
         return $msg . ' -وضعیت: ' . "$msgNumber";
 
     }
-
-
 }
