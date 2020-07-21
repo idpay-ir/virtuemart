@@ -16,7 +16,7 @@
     </files>
 
     <updateservers>
-        <server type="extension" priority="1" name="System - IDPay for J2Store">https://static.idpay.ir/plugins/joomla/virtuemart-idpay-udpate.xml</server>
+        <server type="extension" priority="1" name="System - IDPay for Virtuemart">https://static.idpay.ir/plugins/joomla/virtuemart-idpay-udpate.xml</server>
     </updateservers>
 
     <vmconfig>
