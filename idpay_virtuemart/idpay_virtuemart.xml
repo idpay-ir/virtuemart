@@ -3,9 +3,9 @@
     <name>System - IDPay for Virtuemart</name>
     <version>2.0.0</version>
     <description>IDPay payment gateway for Virtuemart</description>
-    <author>JMDMahdi, Vispa</author>
+    <author>JMDMahdi, vispa, mnbp1371 , Publisher: IDPay</author>
     <authorUrl>https://idpay.ir</authorUrl>
-    <authorEmail>info@idpay.ir</authorEmail>
+    <authorEmail>support@idpay.ir</authorEmail>
     <creationDate>June 2020</creationDate>
     <copyright>Copyright (C) 2020 IDPay</copyright>
     <license>http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later</license>
