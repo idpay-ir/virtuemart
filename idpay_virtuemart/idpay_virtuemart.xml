@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <extension version="3.6" type="plugin" group="vmpayment" method="upgrade">
-    <name>IDPay for Virtuemart</name>
+    <name>VM Payment - IDPay for Virtuemart</name>
     <version>2.0.0</version>
     <description>IDPay payment gateway for Virtuemart</description>
-    <author>JMDMahdi, Vispa</author>
+    <author>JMDMahdi, vispa, mnbp1371 , Publisher: IDPay</author>
     <authorUrl>https://idpay.ir</authorUrl>
-    <authorEmail>info@idpay.ir</authorEmail>
+    <authorEmail>support@idpay.ir</authorEmail>
     <creationDate>June 2020</creationDate>
     <copyright>Copyright (C) 2020 IDPay</copyright>
     <license>http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later</license>
@@ -16,7 +16,7 @@
     </files>
 
     <updateservers>
-        <server type="extension" priority="1" name="System - IDPay for Virtuemart">https://static.idpay.ir/plugins/joomla/virtuemart-idpay-udpate.xml</server>
+        <server type="extension" priority="1" name="VM Payment - IDPay for Virtuemart">https://static.idpay.ir/plugins/joomla/virtuemart-idpay-update.xml</server>
     </updateservers>
 
     <vmconfig>
