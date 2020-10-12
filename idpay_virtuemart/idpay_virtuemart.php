@@ -27,7 +27,12 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
 {
     private $http;
 
-
+    /**
+    * plgVmPaymentIdpay_virtuemart constructor.
+    * @param $subject
+    * @param $config
+    * @param Http|null $http
+    */
     function __construct(& $subject, $config, Http $http = null)
     {
         $this->http = $http ?: HttpFactory::getHttp();
@@ -40,20 +45,32 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         $this->setConfigParameterable($this->_configTableFieldName, $varsToPush);
     }
 
+    /**
+    * @param $api_key
+    * @param $sandbox
+    * @return array
+    */
     public function options($api_key,$sandbox)
     {
         $options = array('Content-Type' => 'application/json',
             'X-API-KEY' => $api_key,
             'X-SANDBOX' => $sandbox,
         );
+
         return $options;
     }
 
+    /**
+    * @return mixed
+    */
     public function getVmPluginCreateTableSQL()
     {
         return $this->createTableSQL('Payment Idpay Table');
     }
 
+    /**
+    * @return string[]
+    */
     function getTableSQLFields()
     {
         $SQLfields = array(
@@ -72,10 +89,16 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
             'tracking_code' => 'varchar(50)',
             'idpay_id' => 'varchar(100)',
         );
+
         return $SQLfields;
     }
 
 
+    /**
+    * @param $cart
+    * @param $order
+    * @return |null
+    */
     function plgVmConfirmedOrder($cart, $order)
     {
         if (!$this->selectedThisByMethodId($cart->virtuemart_paymentmethod_id)) {
@@ -130,7 +153,6 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         $http_status = $result->code;
         $result = json_decode($result->body);
 
-
         //insert idpay table jnfo
         $dbValues['payment_name'] = $this->renderPluginName($method) . '<br />';
         $dbValues['order_number'] = $order['details']['BT']->order_number;
@@ -145,7 +167,6 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         $dbValues['idpay_id'] = $result->id;
         $this->storePSPluginInternalData($dbValues);
 
-
         if ($http_status != 201 || empty($result) || empty($result->id) || empty($result->link)) {
             $msg = 'خطا هنگام ایجاد تراکنش. وضعیت خطا:' . $http_status . "<br>" . 'کد خطا: ' . $result->error_code . ' پیغام خطا ' . $result->error_message;
             $this->updateStatus('P', 0, $msg, $order['details']['BT']->virtuemart_order_id);
@@ -157,9 +178,12 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         Header('Location: ' . $result->link);
     }
 
+    /**
+    * @param $html
+    * @return |null
+    */
     public function plgVmOnPaymentResponseReceived(&$html)
     {
-
         if (!class_exists('VirtueMartModelOrders')) {
             require(VMPATH_ADMIN . DS . 'models' . DS . 'orders.php');
         }
@@ -198,9 +222,20 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
             $method = $this->getVmPluginMethod($payment_id);
 
             if (JUserHelper::verifyPassword($id, $uId)) {
-                $pid = $jinput->post->get('id', '', 'STRING');
-                $porder_id = $jinput->post->get('order_id', '', 'STRING');
-                $pstatus = $jinput->post->get('status', 0, 'INT');
+
+                // Check request method
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+                  $pid = $jinput->post->get('id', '', 'STRING');
+                  $porder_id = $jinput->post->get('order_id', '', 'STRING');
+                  $pstatus = $jinput->post->get('status', 0, 'INT');
+                }
+                elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
+
+                  $pid = $jinput->get->get('id', '', 'STRING');
+                  $porder_id = $jinput->get->get('order_id', '', 'STRING');
+                  $pstatus = $jinput->get->get('status', 0, 'INT');
+                }
 
                 if (!empty($pid) && !empty($porder_id) && $porder_id == $order_id) {
                     if ($pstatus == 10) {
@@ -227,7 +262,6 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
                         $verify_track_id = empty($result->track_id) ? NULL : $result->track_id;
                         $hashed_card_no = empty($result->payment->hashed_card_no) ? NULL : $result->payment->hashed_card_no;
                         $card_no = empty($result->payment->hashed_card_no) ? NULL : $result->payment->hashed_card_no;
-
 
                         if (empty($verify_status) || empty($verify_track_id) || empty($verify_amount) || $verify_amount != $price || $verify_status < 100) {
                             $msg = $this->idpay_get_failed_message($method, $verify_track_id, $order_id);
@@ -283,7 +317,10 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         }
     }
 
-
+    /**
+    * @param $id
+    * @return mixed
+    */
     protected function getOrderInfo($id)
     {
         $db = JFactory::getDbo();
@@ -293,9 +330,14 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         $query->where($db->qn('crypt_virtuemart_pid') . ' = ' . $db->q($id));
         $db->setQuery((string)$query);
         $result = $db->loadObject();
+
         return $result;
     }
 
+    /**
+    * @param $id
+    * @param $trackingCode
+    */
     protected function updateOrderInfo($id, $trackingCode)
     {
         $db = JFactory::getDbo();
@@ -309,7 +351,12 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         $db->execute();
     }
 
-
+    /**
+    * @param $cart
+    * @param $method
+    * @param $cart_prices
+    * @return bool
+    */
     protected function checkConditions($cart, $method, $cart_prices)
     {
         $address = (($cart->ST == 0) ? $cart->BT : $cart->ST);
@@ -342,6 +389,12 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         return FALSE;
     }
 
+    /**
+    * @param VirtueMartCart $cart
+    * @param int $selected
+    * @param $htmlIn
+    * @return bool
+    */
     public function plgVmDisplayListFEPayment(VirtueMartCart $cart, $selected = 0, &$htmlIn)
     {
         if ($this->getPluginMethods($cart->vendorId) === 0) {
@@ -375,15 +428,27 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
             }
         }
         $htmlIn[] = $htmla;
+
         return true;
     }
 
 
+    /**
+    * @param $method
+    * @param $track_id
+    * @param $order_id
+    * @return string|string[]
+    */
     function idpay_get_success_message($method, $track_id, $order_id)
     {
         return str_replace(["{track_id}", "{order_id}"], [$track_id, $order_id], $method->success_massage);
     }
 
+    /**
+    * @param VirtueMartCart $cart
+    * @param $msg
+    * @return |null
+    */
     public function plgVmOnSelectCheckPayment(VirtueMartCart $cart, &$msg)
     {
         if (!$this->selectedThisByMethodId($cart->virtuemart_paymentmethod_id)) {
@@ -393,45 +458,85 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         return $this->OnSelectCheck($cart);
     }
 
+    /**
+    * @param VirtueMartCart $cart
+    * @param array $cart_prices
+    * @param $paymentCounter
+    * @return mixed
+    */
     function plgVmOnCheckAutomaticSelectedPayment(VirtueMartCart $cart, array $cart_prices = array(), &$paymentCounter)
     {
         return $this->onCheckAutomaticSelected($cart, $cart_prices, $paymentCounter);
     }
 
+    /**
+    * @param VirtueMartCart $cart
+    * @param array $cart_prices
+    * @param $cart_prices_name
+    * @return mixed
+    */
     public function plgVmonSelectedCalculatePricePayment(VirtueMartCart $cart, array &$cart_prices, &$cart_prices_name)
     {
         return $this->onSelectedCalculatePrice($cart, $cart_prices, $cart_prices_name);
     }
 
+    /**
+    * @param VirtueMartCart $cart
+    * @return bool|null
+    */
     public function plgVmOnCheckoutCheckDataPayment(VirtueMartCart $cart)
     {
         if (!$this->selectedThisByMethodId($cart->virtuemart_paymentmethod_id)) {
             return NULL;
         }
+
         return true;
     }
 
+    /**
+    * @param $jplugin_id
+    * @return mixed
+    */
     function plgVmOnStoreInstallPaymentPluginTable($jplugin_id)
     {
         return $this->onStoreInstallPluginTable($jplugin_id);
     }
 
-
+    /**
+    * @param $order_number
+    * @param $method_id
+    * @return mixed
+    */
     function plgVmonShowOrderPrintPayment($order_number, $method_id)
     {
         return $this->onShowOrderPrint($order_number, $method_id);
     }
 
+    /**
+    * @param $data
+    * @return mixed
+    */
     function plgVmDeclarePluginParamsPaymentVM3(&$data)
     {
         return $this->declarePluginParams('payment', $data);
     }
 
+    /**
+    * @param $name
+    * @param $id
+    * @param $table
+    * @return mixed
+    */
     function plgVmSetOnTablePluginParamsPayment($name, $id, &$table)
     {
         return $this->setOnTablePluginParams($name, $id, $table);
     }
 
+    /**
+    * @param $method
+    * @param bool $selectedUserCurrency
+    * @return bool|false|string[]
+    */
     static function getPaymentCurrency(&$method, $selectedUserCurrency = false)
     {
         if (empty($method->payment_currency)) {
@@ -465,6 +570,12 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
 
     }
 
+    /**
+    * @param $status
+    * @param $notified
+    * @param string $comments
+    * @param $id
+    */
     protected function updateStatus($status, $notified, $comments = '', $id)
     {
         $modelOrder = VmModel::getModel('orders');
@@ -474,7 +585,13 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         $modelOrder->updateStatusForOneOrder($id, $order, TRUE);
     }
 
-
+    /**
+    * @param $method
+    * @param $track_id
+    * @param $order_id
+    * @param null $msgNumber
+    * @return string
+    */
     public function idpay_get_failed_message($method, $track_id, $order_id, $msgNumber = null)
     {
         $msg = $this->otherStatusMessages($msgNumber);
@@ -489,7 +606,6 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
      */
     public function otherStatusMessages($msgNumber = null)
     {
-
         switch ($msgNumber) {
             case "1":
                 $msg = "پرداخت انجام نشده است";
@@ -500,7 +616,7 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
             case "3":
                 $msg = "خطا رخ داده است";
                 break;
-            case "3":
+            case "4":
                 $msg = "بلوکه شده";
                 break;
             case "5":
@@ -537,6 +653,6 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         }
 
         return $msg . ' -وضعیت: ' . "$msgNumber";
-
     }
+
 }
