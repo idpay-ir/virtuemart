@@ -191,7 +191,6 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
         $app = JFactory::getApplication();
         $jinput = $app->input;
         $gateway = $jinput->get->get('gw', '', 'STRING');
-        $msgNumber = $jinput->post->get('status', '', 'INTEGER');
 
         if ($gateway == 'IDPay') {
             $session = JFactory::getSession();
@@ -229,12 +228,14 @@ class plgVmPaymentIdpay_virtuemart extends vmPSPlugin
                   $pid = $jinput->post->get('id', '', 'STRING');
                   $porder_id = $jinput->post->get('order_id', '', 'STRING');
                   $pstatus = $jinput->post->get('status', 0, 'INT');
+                  $msgNumber = $jinput->post->get('status', '', 'INTEGER');
                 }
                 elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
                   $pid = $jinput->get->get('id', '', 'STRING');
                   $porder_id = $jinput->get->get('order_id', '', 'STRING');
                   $pstatus = $jinput->get->get('status', 0, 'INT');
+                  $msgNumber = $jinput->get->get('status', '', 'INTEGER');
                 }
 
                 if (!empty($pid) && !empty($porder_id) && $porder_id == $order_id) {
