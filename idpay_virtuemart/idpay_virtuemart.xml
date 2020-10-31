@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <extension version="3.6" type="plugin" group="vmpayment" method="upgrade">
-    <name>VM Payment - IDPay for Virtuemart</name>
+    <name>IDPay for Virtuemart</name>
     <version>2.0.1</version>
     <description>IDPay payment gateway for Virtuemart</description>
     <author>JMDMahdi, vispa, mnbp1371 , Publisher: IDPay</author>
